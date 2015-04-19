@@ -1,0 +1,44 @@
+Îò êîãî: 	Jon Timmis <jon.timmis@york.ac.uk>
+Êîìó: 	karpov_ve@mail.ru
+Êîïèè: 	Airat Khasianov <khasianov@gmail.com>
+Invitation to Royal Society Meeting : MArch 2013
+20 íîÿáðÿ 2012, 16:58:44
+
+Dear Dr Karpov:
+
+Myself and Dr Airat Khasianov are part of a team organising a meeting on Information Technology as part of a Royal Society organised UK-Russia Frontiers of Science Symposium is co-organized (TAS). The conference brings together outstanding early-career UK and Russian scientists from all fields of the natural sciences for an exchange of new ideas in research.   Please see  http://royalsociety.org/about-us/international/frontiers-of-science/for more information on this series.  The meeting will be held in Russia during March 12th - 14th 2013. 
+
+Our session is entitled "Long-term autonomous systems: Individuals to Swarms" an outline is provided below of what we would like to cover.  Our session will last for 2 hours. We would like to invite you to be an Introductory speaker for this event. As an introductory speaker you would be required to present a 10- to 15-minute overview of the field to introduce the audience to the session topic as a "frontier" of science and to place the two session talks in perspective with respect to the session topic and each other. Once the other talks are confirmed, we will be able to liaise with all speakers to ensure what everyone knows what everyone is going to talk about, so we have a coherent topic to present.  We expect an audience of around 70 people, from all areas of science.
+
+This is a very exciting opportunity for the area, and I hope that it will be of interest to you and you will be able to accept our invitation. All travel expenses etc will be covered.
+
+Please let us know if you are able to accept this invitation, and please ask any questions if you need.
+
+Our best wishes
+
+Jon Timmis
+Airat Khasianov
+
+
+Outline of session: 
+
+Creating robotic systems that are capable of extended operation without human intervention is a major challenge in engineering and computing.  Issues range from power management, to autonomous control, to fault tolerance to operating system management.  The problem is complex and requires interaction from many different disciplines., often ideas from biological systems are adapted for use in the robotics area.  
+
+The idea of investigating bio-inspired control algorithms is based on the fact that interacting groups of organisms (swarms, herds, flocks) are frequently found in nature. Over the recent years, various expressions have been used to describe a group of simple physical robots such as cellular robotics, collective robotics and distributed robotics. Due to the strong biological background, the term ‘swarm robotics’ has also recently been used. The application of single entities forming a group is called swarm robotics, which is the robotic application of swarm intelligence, and can be considered a type of collective system, though a special case of one. There have been many attempts in the literature to try and solve major key problems of autonomously interacting moving agents, which are: complexity, noise tolerance, adaptability and predictability of collective behavior.
+
+Modelling of such social systems is a key aspect of this area, as there is a great deal to be learnt about distributed decision making from biological systems and how that might be translated across into swarm robotic systems.
+
+This session would combine expertise from computing, robotics, social insects and animals and modelling to discuss the issues surrounding the principled development and construction of large scale autonomous robotic systems, from individual to swarm systems.
+---
+Prof Jon Timmis
+Royal Society Wolfson Research Merit Award Holder
+Department of Computer Science, 
+Department of Electronics and
+York Centre for Complex Systems Analysis.
+University of York. YO10 5DD. UK.
+Phone: +44 (0) 1904 322318
+http://www-users.cs.york.ac.uk/~jtimmis
+http://www.ycil.org.uk/
+
+EMAIL DISCLAIMER http://www.york.ac.uk/docs/disclaimer/email.htm
+
