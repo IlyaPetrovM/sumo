@@ -413,10 +413,10 @@ void main(void)
     sens = NO_SENS; // Выставляем значение по-умолчанию
     
     // Считываем сигналы датчиков
-    if(ReadByteADC(6)>LINE_LimLeft) sens = FOTO_L;
-    if(ReadByteADC(7)>LINE_LimRight)sens = FOTO_R;
-    SharpFL = (sen_1==0);
-    SharpFR = (sen_2==0);
+    if(ReadByteADC(ADC_1)>LINE_LimLeft) sens = FOTO_L;
+    if(ReadByteADC(ADC_2)>LINE_LimRight)sens = FOTO_R;
+    SharpFL = (sen_4==0);  // green
+    SharpFR = (sen_6==0);  // black
 
     if(SharpFL && SharpFR) 
     {
@@ -428,9 +428,9 @@ void main(void)
         if(SharpFR) sens = SHARP_FR;  
     }
             
-    if(sen_3==0) sens = SHARP_SL;
-    if(sen_4==0) sens = SHARP_SR;
-    if(sen_5==0) sens = SHARP_FC;
+    if(sen_3==0) sens = SHARP_SL; // red
+    if(sen_5==0) sens = SHARP_SR; // blue
+    //if(sen_5==0) sens = SHARP_FC;
        
     if(T>MAXT) // Пора менять тактику
     {
