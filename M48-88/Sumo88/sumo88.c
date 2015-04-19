@@ -1,15 +1,14 @@
 /*****************************************************
-Project : Робот-сумоист RK-25/26 MS
-          Модифицированная программа
-Version : 1.05 
+Project : Робот-сумоист uS RP-1.1 
+Version : 0.01 
 Date    : 26.04.2010
-LP      : 09.03.2013
-Author  : Карпов Валерий Валерьевич
-Company : Лаборатория робототехники
-Comments: 2 датчика Sharp, 3 датчика Sharp-цифровые, 2 датчика QRD1114,
-          4 мотор-редуктора Gekko Turbo (1:150), 
-          литий-ионовый аккумулятор, сервопривод микро  
-Chip type           : ATmega88PA
+LP      : 03.10.2014
+Author  : Карпов Валерий Валерьевич, Петров Илья Михайлович
+Company : Лаборатория Робототехники
+Comments: 4 датчика Sharp-цифровые, 1 датчик QRD1114,
+          2 мотор-редуктора Gekko Turbo (1:50), 
+          литий-ионовый аккумулятор (2 банки), мотор для открывания отвала
+Chip type           : ATmega88V
 Clock frequency     : 7,372800 MHz
 Memory model        : Small
 External SRAM size  : 0
@@ -23,13 +22,15 @@ Data Stack size     : 128
 
 #define LimLeft  (BYTE)250 // Порог срабатывания датчиков полосы
 #define LimRight (BYTE)250
-#define LimSharp  35// Порог срабатывания датчиков Шарп
+#define LimSharp  40// Порог срабатывания датчиков Шарп
 #define MAXT 1500    // Время смены тактики (количество тактов)
 
-#define SENSOR_START PIND.4 // Стартовый сигнал
-
 BYTE SharpFL, SharpFR, SharpSL, SharpSR, SharpCL, SharpCR, FotoL, FotoR;
-
+enum {
+    LEFT,
+    RIGHT,
+    FWD
+};
 void DebugProc(void)
 {
   BYTE re1, re2;
@@ -55,14 +56,14 @@ void DebugProc(void)
   while (1)
   {   
     re1 = ReadByteADC(ADC_E1);
-    re2 = ReadByteADC(ADC_E2);
+    re2 = ReadByteADC(ADC_E2);  // QRD
 
-    a1 = ReadByteADC(ADC_1);
-    a2 = ReadByteADC(ADC_2);
-    a3 = ReadByteADC(ADC_3);
-    a4 = ReadByteADC(ADC_4);
-    a5 = ReadByteADC(ADC_5);
-    a6 = ReadByteADC(ADC_6);
+    a1 = ReadByteADC(ADC_1);  // SharpSR
+    a2 = ReadByteADC(ADC_2);  // SharpSL
+    a3 = ReadByteADC(ADC_3);  // SharpFL
+    a4 = ReadByteADC(ADC_4);  // SharpFR
+    a5 = ReadByteADC(ADC_5);  
+    a6 = ReadByteADC(ADC_6);  
     
     delay_ms(20);
     
@@ -72,13 +73,11 @@ void DebugProc(void)
 
 //----------------------------------------------------------
 
-#define MAX_CNT_OTVAL 10 // Число управляющих импульсов на сервопривод для опускания отвала
-
 void main(void)
 {
+  int n;
   int T;  // Счетчик тактов для смены тактики поиска
   int a;  // Куда крутиться, 0 - влево, 1 - вправо, 2 - вперёд
-  BYTE cntOtval = 0; // Счетчик числа импульсов для опускания отвала
   
   // Инициализация контроллера
   M48Init();
@@ -88,14 +87,6 @@ void main(void)
   // State6=T State5=P State4=P State3=P State2=P State1=T State0=T 
   PORTC=0x3C;
   DDRC=0x00;
-
-  // Переопределяем ef_2 (D.4) как цифровой подтянутый вход
-  // Port D initialization
-  // Func7=Out Func6=Out Func5=Out Func4=In Func3=Out Func2=Out Func1=In Func0=In 
-  // State7=0 State6=0 State5=0 State4=P State3=0 State2=0 State1=T State0=T 
-  PORTD=0x10;
-  DDRD=0xEC;
-
   
   // Скроостью управлять не будем. Выставляем по максиммуму
   PORTB.1 = 1;
@@ -104,39 +95,79 @@ void main(void)
   robotStop();
 
   pip();
-  printf("\r\nSumo 88 RK-25/26MS Version 1.05\r\n\r\n");
+  printf("\r\nSumo 88 uS RP-1.1 Version 0.01\r\n\r\n");
 
   //--------------------------------------------------------
   // Переход в отладочный режим
   // Для перехода в отладочный режим необходимо, чтоб перед включением датчики 
   // границы находились на светлом фоне
   //--------------------------------------------------------
-  FotoL = ReadByteADC(6)>LimLeft;
-  FotoR = ReadByteADC(7)>LimRight;
-  if(FotoL && FotoR)
+  FotoR = ReadByteADC(ADC_E2)>LimRight;
+  if(FotoR)
     DebugProc();
  
   robotStop();
-   
-  //--------------------------------------------------------
-  // Ожидание сигнала START
-  //--------------------------------------------------------
-  while(SENSOR_START==0);
+    
 
-/***    
-  // Выдача управляющах импульсов на сервомашинку, для опускания отвала
-  // Изображаем управляющий ШИМ
-  // Это займет около 10*(18+0.9) = 189 мс.
-  for(n=0;n<MAX_CNT_OTVAL;n++)
+  // Выдача управляющах импульсов на мотор, для опускания отвала
+//  while(FotoR!=1) 
+//  {
+//  SharpSR = (sen_1==0);
+//  FotoR = ReadByteADC(ADC_E2)>LimRight;
+//  if(SharpSR)
+//  { 
+//        ef_1 = 1;
+//  }
+//  else
+//  { ef_1 = 0; }
+//  }
+
+//--------------------------------------------------------
+// Выбор поворота после старта
+//--------------------------------------------------------
+  a = -1;
+  while(a == -1) 
   {
-    ef_1 = 0;
-    delay_us(18000); // Период импульсов. Вообще должно быть так: 20000 - <ширина импульса> = 20000-900 = 19100
+    SharpSR = (sen_1==0);
+    SharpSL = (sen_2==0);
+    if(SharpSL) 
+    {
+        a = LEFT;  
+    } 
+    if(SharpSR)
+    { 
+        a = RIGHT;
+    }
 
-    ef_1 = 1;
-    delay_us(900); // Ширина импульса 900 мкс (0.9 мс) - крайнее положение
   }
-***/
+  // Проверка выбранной стороны
+  if(SharpSL) 
+  {
+
+    pip(); delay_ms(200); 
+    goLeft(); 
+  }
+  if(SharpSR) 
+  {
+    pip(); delay_ms(150); 
+    robotStop(); delay_ms(100); 
+    pip(); delay_ms(150); 
+    goRight(); 
+  }
+  delay_ms(10);
+  robotStop(); 
+    
+//--------------------------------------------------------
+// Ожидание сигнала START
+//--------------------------------------------------------
+  while(SENSOR_START==0);
+  //delay_ms(5000);   
+  T = 0;
+  // Выдача управляющах импульсов на мотор, для опускания отвала
+  ef_1 = 1;
+  delay_ms(100);
   ef_1 = 0;
+  
   T = 0;
   a = 0;
         
@@ -145,39 +176,24 @@ void main(void)
   //--------------------------------------------------------
   while (1)
   {
-    //------------------------------------------------------
-    // Опускаем отвал на ходу
-    //------------------------------------------------------
-  
-    if(cntOtval<MAX_CNT_OTVAL)
-    {
-      cntOtval++;
-      //Выдаем импульс (с задержками)
-      delay_us(18000); // Период импульсов. Вообще должно быть так: 20000 - <ширина импульса> = 20000-900 = 19100
-      ef_1 = 1;
-      delay_us(900); // Ширина импульса 900 мкс (0.9 мс) - крайнее положение
-      ef_1 = 0;      
-    }   
-    // Реакция на сигнал СТОП
-    if(SENSOR_START==0)
-    {
-      robotStop();
-      pip();
-      while(1);
-    }
-  
     // Считываем сигналы датчиков
-    SharpFL = ReadByteADC(ADC_1)>LimSharp;
-    SharpFR = ReadByteADC(ADC_2)>LimSharp;
-     
-    SharpSL = (sen_3==0);
-    SharpSR = (sen_4==0);
-    SharpCL = (sen_5==0);
-    SharpCR = (sen_6==0);
-
     
-    FotoL = ReadByteADC(6)>LimLeft;
-    FotoR = ReadByteADC(7)>LimRight;
+//    //Старое подключение
+//    SharpFL = ReadByteADC(ADC_1)>LimSharp;
+//    SharpFR = ReadByteADC(ADC_2)>LimSharp;
+//    SharpSL = (sen_3==0);
+//    SharpSR = (sen_4==0);
+//    SharpCL = (sen_5==0);
+//    SharpCR = (sen_6==0);
+    
+    //Датчики подключены по-особому!
+    SharpSR = (sen_1==0);
+    SharpSL = (sen_2==0);
+    
+    SharpFL = (sen_3==0);
+    SharpFR = (sen_4==0);
+    
+    FotoR = ReadByteADC(ADC_E2)>LimRight;
     
     //------------------------------------------------------
     // Безусловные рефлексы
@@ -204,6 +220,7 @@ void main(void)
       goFastLeft();
       T = 0;
       continue;
+    }
     //------------------------------------------------------
     // Общие действия
     // Обнаружение противника передними датчиками
@@ -214,14 +231,14 @@ void main(void)
       T = 0;
       continue;
     }
-    if(SharpFL||SharpCL||SharpSL)
+    if(SharpSL)
     {
       goFastLeft();
       T = 0;
       a = 0;
       continue;
     }                 
-    if(SharpFR||SharpCR||SharpSR)
+    if(SharpSR)
     {
       goFastRight();
       T = 0;
@@ -232,8 +249,8 @@ void main(void)
     // Никого не обнаружили
     // Поиск противника
     //------------------------------------------------------
-    if(a==0) goFastLeft();
-    if(a==1) goFastRight();
+    if(a==0) goLeft();
+    if(a==1) goRight();
     if(a==2) goFwd();
     
     T=T+1;
