@@ -1,11 +1,11 @@
 /*****************************************************
-Project : Робот-сумоист mS RPM-1 "Floppy"
-Version : 2.01
+Project : Робот-сумоист mS RPM-2 "Gekko"
+Version : 1.00
 Date    : 19.08.2013 
 LP      : 26.02.2014
 Author  : Петров Илья Михайлович, Малышев Александр Александрович
 Company : Лаборатория робототехники
-Comments: 4 датчика Sharp-цифровые, 2 датчика QRD1114,
+Comments: 5 датчиов Sharp-цифровые, 2 датчика QRD1114,
           2 мотор-редуктора Gekko Turbo (1:50), 
           литий-полимерный аккумулятор
 Chip type           : ATmega88
@@ -413,10 +413,10 @@ void main(void)
     sens = NO_SENS; // Выставляем значение по-умолчанию
     
     // Считываем сигналы датчиков
-    if(ReadByteADC(ADC_1)>LINE_LimLeft) sens = FOTO_L;
-    if(ReadByteADC(ADC_2)>LINE_LimRight)sens = FOTO_R;
-    SharpFL = (sen_4==0);  // green
-    SharpFR = (sen_6==0);  // black
+    if(ReadByteADC(6)>LINE_LimLeft) sens = FOTO_L;
+    if(ReadByteADC(7)>LINE_LimRight)sens = FOTO_R;
+    SharpFL = (sen_1==0);
+    SharpFR = (sen_2==0);
 
     if(SharpFL && SharpFR) 
     {
@@ -428,9 +428,9 @@ void main(void)
         if(SharpFR) sens = SHARP_FR;  
     }
             
-    if(sen_3==0) sens = SHARP_SL; // red
-    if(sen_5==0) sens = SHARP_SR; // blue
-    //if(sen_5==0) sens = SHARP_FC;
+    if(sen_3==0) sens = SHARP_SL;
+    if(sen_4==0) sens = SHARP_SR;
+    if(sen_5==0) sens = SHARP_FC;
        
     if(T>MAXT) // Пора менять тактику
     {
