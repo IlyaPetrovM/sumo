@@ -1,0 +1,3 @@
+Робот мини-сумо
+"Project" -> "Configure" ->"C Compliler" -> "Globally #define":
+_M48_LIB_
