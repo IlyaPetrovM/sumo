@@ -1,8 +1,8 @@
 /*****************************************************
-Project : Робот-сумоист RPM-1 "Floppy" мини-сумо
-Version : 1.00 
-Date    : 26.04.2010
-LP      : 19.08.2013
+Project : Робот-сумоист mS RPM-1 "Floppy"
+Version : 2.01
+Date    : 19.08.2013 
+LP      : 26.02.2014
 Author  : Петров Илья Михайлович, Малышев Александр Александрович
 Company : Лаборатория робототехники
 Comments: 4 датчика Sharp-цифровые, 2 датчика QRD1114,
@@ -14,46 +14,75 @@ Memory model        : Small
 External SRAM size  : 0
 Data Stack size     : 128
 *****************************************************/
-
+/*****************************************************
+Features:
+2.02
+    + Центральный датчик SharpFC  
+    + Танковый разворот для поиска противника  включается только при старте и отъезде от линии 
+2.01
+    + Остановка с задержкой вынесена перед switch и добавлена проверка времени, в течение которого робот ещё ищет цель
+    + Индикация поворота в после старта по моторам и по светодиоду
+    + Случайное выставление времени агрессии после неудачного нападения
+2.00
+    + Хранение предыдущего состояния робота
+    + Введена задержка перед запуском проверки двигателей (чтобы успеть поставить робота на поле)
+*****************************************************/
 #include <mega88.h>
 #include <math.h>
 #include <stdlib.h>
 #include "m48lib.h"
 
-#define LimLeft  (BYTE)150 // Порог срабатывания датчиков полосы
-#define LimRight (BYTE)150
-#define LINE_T   (BYTE)400// Время отъезда от линии
-#define CHECK_LINE (BYTE) 1 // >0 - проверка реакции на край поля
+#define LINE_LimLeft  (BYTE)100 // Порог срабатывания датчиков полосы
+#define LINE_LimRight (BYTE)100
+#define LINE_BACK_DELAY   (BYTE)  300// Время отъезда от линии
+#define LINE_TANK (BYTE) 1000      // активный поиск противника при развороте от линии
+
+#define TANK_START (BYTE) 1000  //Активный поиск противника при старте
 
 #define MAXT 2500    // Время смены тактики (количество тактов)
 
+//-------------------------------------------------------------
+//--Константы сенсоров (для запоминания предыдущего состояния) 
+enum {
+    NO_SENS,
+    FOTO_L,   
+    FOTO_R,
+    SHARP_SL,
+    SHARP_SR, 
+    SHARP_FLR,
+    SHARP_FL,
+    SHARP_FR,
+    SHARP_FC
+};
+enum {
+    LEFT,
+    RIGHT,
+    FWD
+};
+short unsigned int sens = NO_SENS;            // текущее состояние
+short unsigned int last_sens = NO_SENS;       // предыдущее состояние
+//-------------------------------------------------------------
+
+
 #define SENSOR_START PIND.4 // Стартовый сигнал
 
-BYTE SharpFL, SharpFR, SharpSL, SharpSR, FotoL, FotoR;
-void turning()
-{      short t;
-    for (t=0; (sen_1==0)&&(sen_2==0)&&(sen_3==0)&&(sen_4==0)&&(t<=2300); t++) 
-    { 
-        goFastRight();
-    }
-    
-}
+BYTE SharpFL, SharpFR, SharpFC, SharpSL, SharpSR, FotoL, FotoR;
+
 void DebugProc(void)
 {
-  //BYTE re1, re2;
-  //BYTE a1, a2, a3, a4, a5, a6;
+  BYTE re1, re2;
+  BYTE a1, a2, a3, a4, a5, a6;
   
   printf("\r\nTEST REGIME\r\n");
 
   // Отладочные телодвижения 
-  
-  #define Time 150
   delay_ms(3000);
+  #define Time 150
   // (проверка правильности подключения двигателей: вперед, назад, влево, вправо)
-  goFwd(); delay_ms(Time);       robotStop(); delay_ms(Time+200);
-  goBack(); delay_ms(Time);      robotStop(); delay_ms(Time+200);
-  goFastLeft(); delay_ms(Time);  robotStop(); delay_ms(Time+200);
-  goFastRight(); delay_ms(Time); robotStop(); 
+  goFwd(); delay_ms(Time);        robotStop(); delay_ms(Time+200);
+  goBack(); delay_ms(Time);       robotStop(); delay_ms(Time+200);
+  goFastRight(); delay_ms(Time);  robotStop(); delay_ms(Time+200);
+  goFastLeft(); delay_ms(Time);   robotStop(); 
   pip();
   // Проверка правильности подключения световых датчиков
   //if(FotoL) goFastLeft(); delay_ms(Time);
@@ -63,28 +92,31 @@ void DebugProc(void)
            
   while (1)
   {     
-
-    delay_ms(10);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+    // Отладка с помощью моторов                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
     SharpFL = (sen_1==0);
     SharpFR = (sen_2==0);
     SharpSL = (sen_3==0);
     SharpSR = (sen_4==0);
+    SharpFC = (sen_5==0); // Sharp Front Center
     
-    if (SharpFL || SharpFR) {robotStop();}
-    if (SharpFL) {goLeft(); }
-    if (SharpFR) {goRight(); }
-    if (SharpSL&&SharpSR) {robotStop();} // Защита от помех
-    if (SharpSL) {goFastLeft(); }
-    if (SharpSR) {goFastRight();}       
-  }
-
-}
-    //FotoL = ReadByteADC(6)>LimLeft;
-    //FotoR = ReadByteADC(7)>LimRight;
-   //  if (FotoL) {goBack(); delay_ms(500); goLeft(); delay_ms(500); robotStop();}
-  // if (FotoR) {goBack(); delay_ms(500); goRight(); delay_ms(500); robotStop();}
+    if(SharpFC)
+        goFwd();
+    else
+    {    
+        if (SharpFL && SharpFR) 
+        {
+            robotStop();
+        } 
+        else
+        {
+            if (SharpFL) {goLeft();  }
+            if (SharpFR) {goRight(); }                  
+        }
+        if (SharpSL) {goFastLeft(); }
+        if (SharpSR) {goFastRight();} 
+    } 
     
-      /*
+    // Вывод значений датчиков на экран   
     re1 = ReadByteADC(ADC_E1);
     re2 = ReadByteADC(ADC_E2);
 
@@ -96,16 +128,28 @@ void DebugProc(void)
     a6 = ReadByteADC(ADC_6);
     
     printf("(%4u %4u) (%4u %4u) %4u %4u %4u %4u\r", re1, re2, a1, a2, a3, a4, a5, a6);   
-   */ 
-//----------------------------------------------------------
+  }
+     
 
-#define MAX_CNT_OTVAL 10 // Число управляющих импульсов на сервопривод для опускания отвала
+}
+
+    //FotoL = ReadByteADC(6)>LINE_LimLeft;
+    //FotoR = ReadByteADC(7)>LINE_LimRight;
+   //  if (FotoL) {goBack(); delay_ms(500); goLeft(); delay_ms(500); robotStop();}
+  // if (FotoR) {goBack(); delay_ms(500); goRight(); delay_ms(500); robotStop();}
+    
+ 
+   
+
+//----------------------------------------------------------
 
 void main(void)
 {
-  int T;  // Счетчик тактов для смены тактики поиска
-  int a;  // Куда крутиться, 0 - влево, 1 - вправо, 2 - вперёд
-  BYTE cntOtval = 0; // Счетчик числа импульсов для опускания отвала
+  int T;  // Счетчик тактов для смены тактики поиска 
+  int a;  // Куда крутиться, 0 - влево, 1 - вправо, 2 - вперёд 
+
+  unsigned short tTankLimit=TANK_START; // Необходимое количество тактов танкового разворота
+  unsigned short tTank=0;         // Счётчик тактов танкового разворота для поиска противника  
   
   // Инициализация контроллера
   M48Init();
@@ -132,65 +176,77 @@ void main(void)
 
   
   pip();
-  printf("\r\nSumo 88 RPM-1 Floppy micro Version 1.0\r\n\r\n");
+  printf("\r\nSumo 88 mS RPM-1 'Floppy' Version 2.01 07.12.2013\r\n\r\n");
 
-  //--------------------------------------------------------
-  // Переход в отладочный режим
-  // Для перехода в отладочный режим необходимо, чтоб перед включением датчики 
-  // границы находились на светлом фоне
-  //--------------------------------------------------------
-  FotoL = ReadByteADC(6)>LimLeft;
-  FotoR = ReadByteADC(7)>LimRight;
+//--------------------------------------------------------
+// Переход в отладочный режим
+// Для перехода в отладочный режим необходимо, чтоб перед включением датчики 
+// границы находились на светлом фоне
+//--------------------------------------------------------
+  FotoL = ReadByteADC(6)>LINE_LimLeft;
+  FotoR = ReadByteADC(7)>LINE_LimRight;
   
-  if(FotoL || FotoR)
+  if(FotoL && FotoR)
   {
    DebugProc();
-   }
+  }
  
   robotStop();
-   
-  //--------------------------------------------------------
-  // Ожидание сигнала START
-  //--------------------------------------------------------
-  //while(SENSOR_START==0);
-  
-  delay_ms(5000);
 
-/***    
-  // Выдача управляющах импульсов на сервомашинку, для опускания отвала
-  // Изображаем управляющий ШИМ
-  // Это займет около 10*(18+0.9) = 189 мс.
-  for(n=0;n<MAX_CNT_OTVAL;n++)
+
+//--------------------------------------------------------
+// Выбор поворота после старта
+//--------------------------------------------------------
+  sens = NO_SENS;
+  while(sens == NO_SENS) 
   {
-    ef_1 = 0;
-    delay_us(18000); // Период импульсов. Вообще должно быть так: 20000 - <ширина импульса> = 20000-900 = 19100
+    if(sen_3==0) 
+    {
+        sens = SHARP_SL; 
+        a = LEFT;  
+    } 
+    if(sen_4==0)
+    { 
+        sens = SHARP_SR; 
+        a = RIGHT;
+    }
 
-    ef_1 = 1;
-    delay_us(900); // Ширина импульса 900 мкс (0.9 мс) - крайнее положение
   }
-***/
-  ef_1 = 0;
-  T = 0;
-  a = 0;
-        
-  //--------------------------------------------------------
-  // Основной цикл
-  //--------------------------------------------------------
+  // Проверка выбранной стороны
+  if(sens == SHARP_SL) 
+  {
+    pip(); delay_ms(200); 
+    goLeft(); 
+  }
+  if(sens == SHARP_SR) 
+  {
+    pip(); delay_ms(150); 
+    robotStop(); delay_ms(100); 
+    pip(); delay_ms(150); 
+    goRight(); 
+  }
+  delay_ms(10);
+  robotStop(); 
+    
+//--------------------------------------------------------
+// Ожидание сигнала START
+//--------------------------------------------------------
+    while(SENSOR_START==0);
+  
+  //delay_ms(5000);
+  
+  T = 0;      
+//--------------------------------------------------------
+// Основной цикл
+//--------------------------------------------------------
   while (1)
   {
-    //------------------------------------------------------
-    // Опускаем отвал на ходу
-    //------------------------------------------------------
-  
-    if(cntOtval<MAX_CNT_OTVAL)
-    {
-      cntOtval++;
-      //Выдаем импульс (с задержками)
-      delay_us(18000); // Период импульсов. Вообще должно быть так: 20000 - <ширина импульса> = 20000-900 = 19100
-      ef_1 = 1;
-      delay_us(900); // Ширина импульса 900 мкс (0.9 мс) - крайнее положение
-      ef_1 = 0;      
-    }   
+
+//------------------------------------------------------
+// Безусловные рефлексы
+// Сначала и идет обработка самых приоритетных сигналов
+//------------------------------------------------------
+
     // Реакция на сигнал СТОП
     if(SENSOR_START==0)
     {
@@ -198,104 +254,187 @@ void main(void)
       pip();
       while(1);
     }
-  
-    // Считываем сигналы датчиков    
+    
+    // Реакция на границу поля
+     switch (sens)
+    { 
+          
+    //  -*---
+    //  --O--
+    //  -----      
+        case(FOTO_L):{
+          
+          robotStop(); 
+          delay_ms(3);
+           
+          goBack(); // Отъезжаем назад
+          delay_ms(LINE_BACK_DELAY);
+           
+          goFastRight(); // Начинаем крутиться
+           
+          // Выставляем более активный режим для разворота
+          a=RIGHT;
+          tTank=0;
+          tTankLimit=LINE_TANK;
+
+          T = 0;
+          break;
+        }
+    //  ---*-
+    //  --O--
+    //  -----
+        case(FOTO_R):
+        {
+          robotStop(); 
+          delay_ms(3); 
+          
+          goBack();  // Отъезжаем назад
+          delay_ms(LINE_BACK_DELAY); 
+        
+          goFastLeft(); // Начинаем крутиться
+          
+          // Выставляем более активный режим для разворота
+          a=LEFT;
+          tTank=0;
+          tTankLimit=LINE_TANK;
+          
+          T = 0;
+          break;                       
+        }  
+    }
+
+//------------------------------------------------------
+// Общие действия
+// Обнаружение противника
+//------------------------------------------------------              
+    switch (sens)
+    {   
+//  --+--
+//  --O--
+//  ----- 
+        case SHARP_FC:
+            {  
+              goFwd();
+              T = 0;
+              break;
+            }       
+//  -+-+-
+//  --O--
+//  ----- 
+        case SHARP_FLR:
+            {  
+              goFwd();
+              T = 0;
+              break;
+            }
+        // Плавные повороты 
+//  -+---
+//  --O--
+//  -----    
+        case SHARP_FL:
+            { 
+              //goFwd();
+              goLeft();
+              T = 0;
+              a = LEFT;
+              break;
+            } 
+        
+//  ---+-
+//  --O--
+//  -----        
+        case SHARP_FR:
+            { 
+              //goFwd();          
+              goRight();
+              T = 0;            
+              a = RIGHT;
+              break;
+            }  
+            
+        // резкие повороты
+//  -----
+//  -+O--
+//  ----- 
+        case SHARP_SL:                                 
+            {     
+            //goLeft();                    
+             goFastLeft();
+              T = 0;
+              a = LEFT;
+              break;
+            }
+//  -----
+//  --O+-
+//  -----     
+        case SHARP_SR:
+            {     
+            //goRight();        
+              goFastRight();
+              T = 0;
+              a = RIGHT;
+              break;
+            }
+         default: 
+            { 
+//------------------------------------------------------
+// Никого не обнаружили
+// Поиск противника
+//------------------------------------------------------
+                if(a==LEFT) 
+                {
+                    if(tTank>tTankLimit)
+                    {    
+                        goLeft();
+                    }
+                    else
+                    {   
+                        goFastLeft();
+                        tTank++;
+                    }  
+                }
+                if(a==RIGHT) 
+                {       
+                    if(tTank>tTankLimit)
+                        goRight();
+                    else
+                    {
+                        goFastRight();
+                        tTank++; 
+                    }
+                }
+                if(a==FWD) goFwd();
+                   
+            }
+    }
+    T=T+1; 
+    
+    last_sens = sens; // Запоминаем предыдущее состояние
+    sens = NO_SENS; // Выставляем значение по-умолчанию
+    
+    // Считываем сигналы датчиков
+    if(ReadByteADC(6)>LINE_LimLeft) sens = FOTO_L;
+    if(ReadByteADC(7)>LINE_LimRight)sens = FOTO_R;
     SharpFL = (sen_1==0);
     SharpFR = (sen_2==0);
-    SharpSL = (sen_3==0);
-    SharpSR = (sen_4==0);
-    
-    FotoL = ReadByteADC(6)>LimLeft;
-    FotoR = ReadByteADC(7)>LimRight;
-    
-    //------------------------------------------------------
-    // Безусловные рефлексы
-    // Сначала и идет обработка самых приоритетных сигналов
-    //------------------------------------------------------
-    // Реакция на границу поля
-    
-    if(FotoL)
+
+    if(SharpFL && SharpFR) 
     {
-      // Отъезжаем назад
-      robotStop();
-      goBack();
-      delay_ms(LINE_T);
-      // Начинаем крутиться
-      goFastRight();
-      goFastRight(); goFastRight();
-      goFastRight();
-      T = 0;
-      //while(CHECK_LINE);
-      continue;
+        sens = SHARP_FLR;
     }
-    if(FotoR)
+    else  
     {
-      // Отъезжаем назад
-      robotStop();
-      goBack();
-      delay_ms(LINE_T);
-      // Начинаем крутиться
-       robotStop();
-      goFastLeft();
-      goFastLeft();  goFastLeft();
-      goFastLeft();
-      T = 0;
-      //while(CHECK_LINE);
-      continue;                        
+        if(SharpFL) sens = SHARP_FL;
+        if(SharpFR) sens = SHARP_FR;  
     }
-   
-    //------------------------------------------------------
-    // Общие действия
-    // Обнаружение противника передними датчиками
-    //------------------------------------------------------
-if(SharpFL&&SharpFR)
-    {  
-      goFwd();
-      T = 0;
-      continue;
-    }
-    // Плавные повороты
-    if(SharpFL)
-    {  
-      goLeft();
-      T = 0;
-      a = 0;
-      continue;
-    }                 
-    if(SharpFR)
-    {            
-      goRight();
-      T = 0;
-      a = 1;
-      continue;
-    }  
-    // резкие повороты
-    if(SharpSL)
-    {                          
-      goFastLeft();
-      T = 0;
-      a = 0;
-      continue;
-    }                 
-    if(SharpSR)
-    {                 
-      goFastRight();
-      T = 0;
-      a = 1;
-      continue;
-    }
-    //------------------------------------------------------
-    // Никого не обнаружили
-    // Поиск противника
-    //------------------------------------------------------
-    if(a==0) goFastLeft();
-    if(a==1) goFastRight();
-    if(a==2) goFwd();
-    
-    T=T+1;
+            
+    if(sen_3==0) sens = SHARP_SL;
+    if(sen_4==0) sens = SHARP_SR;
+    if(sen_5==0) sens = SHARP_FC;
+       
     if(T>MAXT) // Пора менять тактику
     {
-      //pip();
+      pip();
       T=0;
       // Выбираем действие "случайным" образом
       a=rand()%3;  // Остаток от деления на 3 (деление по модулю 3)
