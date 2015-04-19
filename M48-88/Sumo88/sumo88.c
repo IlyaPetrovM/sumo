@@ -1,15 +1,14 @@
 /*****************************************************
-Project : Робот-сумоист RK-27 микро-сумо
-          Модифицированная программа
-Version : 1.05 
+Project : Робот-сумоист RPM-1 "Floppy" мини-сумо
+Version : 1.00 
 Date    : 26.04.2010
-LP      : 09.03.2013
-Author  : Карпов Валерий Валерьевич
+LP      : 19.08.2013
+Author  : Петров Илья Михайлович, Малышев Александр Александрович
 Company : Лаборатория робототехники
-Comments: 2 датчика Sharp, 3 датчика Sharp-цифровые, 2 датчика QRD1114,
-          4 мотор-редуктора Gekko Turbo (1:150), 
-          литий-ионовый аккумулятор, сервопривод микро  
-Chip type           : ATmega88PA
+Comments: 4 датчика Sharp-цифровые, 2 датчика QRD1114,
+          2 мотор-редуктора Gekko Turbo (1:50), 
+          литий-полимерный аккумулятор
+Chip type           : ATmega88
 Clock frequency     : 7,372800 MHz
 Memory model        : Small
 External SRAM size  : 0
@@ -21,39 +20,71 @@ Data Stack size     : 128
 #include <stdlib.h>
 #include "m48lib.h"
 
-#define LimLeft  (BYTE)250 // Порог срабатывания датчиков полосы
-#define LimRight (BYTE)250
+#define LimLeft  (BYTE)150 // Порог срабатывания датчиков полосы
+#define LimRight (BYTE)150
+#define LINE_T   (BYTE)400// Время отъезда от линии
+#define CHECK_LINE (BYTE) 1 // >0 - проверка реакции на край поля
 
-#define MAXT 1500    // Время смены тактики (количество тактов)
+#define MAXT 2500    // Время смены тактики (количество тактов)
 
 #define SENSOR_START PIND.4 // Стартовый сигнал
 
 BYTE SharpFL, SharpFR, SharpSL, SharpSR, FotoL, FotoR;
-
+void turning()
+{      short t;
+    for (t=0; (sen_1==0)&&(sen_2==0)&&(sen_3==0)&&(sen_4==0)&&(t<=2300); t++) 
+    { 
+        goFastRight();
+    }
+    
+}
 void DebugProc(void)
 {
-  BYTE re1, re2;
-  BYTE a1, a2, a3, a4, a5, a6;
+  //BYTE re1, re2;
+  //BYTE a1, a2, a3, a4, a5, a6;
   
   printf("\r\nTEST REGIME\r\n");
 
   // Отладочные телодвижения 
-  // (проверка правильности подключения двигателей: вперед, назад, влево, вправо)
-  #define Time 500
-  goFwd(); delay_ms(Time);
-  goBack(); delay_ms(Time);
-  goLeft(); delay_ms(Time);
-  goRight(); delay_ms(Time); 
-  robotStop(); 
-  pip();
   
-  goFastLeft(); delay_ms(Time);
-  goFastRight(); delay_ms(Time); 
-  robotStop(); 
+  #define Time 150
+  delay_ms(3000);
+  // (проверка правильности подключения двигателей: вперед, назад, влево, вправо)
+  goFwd(); delay_ms(Time);       robotStop(); delay_ms(Time+200);
+  goBack(); delay_ms(Time);      robotStop(); delay_ms(Time+200);
+  goFastLeft(); delay_ms(Time);  robotStop(); delay_ms(Time+200);
+  goFastRight(); delay_ms(Time); robotStop(); 
   pip();
-
+  // Проверка правильности подключения световых датчиков
+  //if(FotoL) goFastLeft(); delay_ms(Time);
+  //if(FotoR) goFastRight(); delay_ms(Time); 
+  //robotStop(); 
+  pip();
+           
   while (1)
-  {   
+  {     
+
+    delay_ms(10);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+    SharpFL = (sen_1==0);
+    SharpFR = (sen_2==0);
+    SharpSL = (sen_3==0);
+    SharpSR = (sen_4==0);
+    
+    if (SharpFL || SharpFR) {robotStop();}
+    if (SharpFL) {goLeft(); }
+    if (SharpFR) {goRight(); }
+    if (SharpSL&&SharpSR) {robotStop();} // Защита от помех
+    if (SharpSL) {goFastLeft(); }
+    if (SharpSR) {goFastRight();}       
+  }
+
+}
+    //FotoL = ReadByteADC(6)>LimLeft;
+    //FotoR = ReadByteADC(7)>LimRight;
+   //  if (FotoL) {goBack(); delay_ms(500); goLeft(); delay_ms(500); robotStop();}
+  // if (FotoR) {goBack(); delay_ms(500); goRight(); delay_ms(500); robotStop();}
+    
+      /*
     re1 = ReadByteADC(ADC_E1);
     re2 = ReadByteADC(ADC_E2);
 
@@ -64,12 +95,8 @@ void DebugProc(void)
     a5 = ReadByteADC(ADC_5);
     a6 = ReadByteADC(ADC_6);
     
-    delay_ms(20);
-    
-    printf("(%4u %4u) (%4u %4u) %4u %4u %4u %4u\r", re1, re2, a1, a2, a3, a4, a5, a6);
-  }
-}
-
+    printf("(%4u %4u) (%4u %4u) %4u %4u %4u %4u\r", re1, re2, a1, a2, a3, a4, a5, a6);   
+   */ 
 //----------------------------------------------------------
 
 #define MAX_CNT_OTVAL 10 // Число управляющих импульсов на сервопривод для опускания отвала
@@ -103,8 +130,9 @@ void main(void)
  
   robotStop();
 
+  
   pip();
-  printf("\r\nSumo 88 RK-25/26MS Version 1.05\r\n\r\n");
+  printf("\r\nSumo 88 RPM-1 Floppy micro Version 1.0\r\n\r\n");
 
   //--------------------------------------------------------
   // Переход в отладочный режим
@@ -113,15 +141,20 @@ void main(void)
   //--------------------------------------------------------
   FotoL = ReadByteADC(6)>LimLeft;
   FotoR = ReadByteADC(7)>LimRight;
-  if(FotoL && FotoR)
-    DebugProc();
+  
+  if(FotoL || FotoR)
+  {
+   DebugProc();
+   }
  
   robotStop();
    
   //--------------------------------------------------------
   // Ожидание сигнала START
   //--------------------------------------------------------
-  while(SENSOR_START==0);
+  //while(SENSOR_START==0);
+  
+  delay_ms(5000);
 
 /***    
   // Выдача управляющах импульсов на сервомашинку, для опускания отвала
@@ -167,10 +200,10 @@ void main(void)
     }
   
     // Считываем сигналы датчиков    
+    SharpFL = (sen_1==0);
+    SharpFR = (sen_2==0);
     SharpSL = (sen_3==0);
     SharpSR = (sen_4==0);
-    SharpFL = (sen_5==0);
-    SharpFR = (sen_6==0);
     
     FotoL = ReadByteADC(6)>LimLeft;
     FotoR = ReadByteADC(7)>LimRight;
@@ -184,43 +217,69 @@ void main(void)
     if(FotoL)
     {
       // Отъезжаем назад
+      robotStop();
       goBack();
-      delay_ms(100);
+      delay_ms(LINE_T);
       // Начинаем крутиться
-      goRight();
+      goFastRight();
+      goFastRight(); goFastRight();
+      goFastRight();
       T = 0;
+      //while(CHECK_LINE);
       continue;
     }
     if(FotoR)
     {
       // Отъезжаем назад
+      robotStop();
       goBack();
-      delay_ms(100);
+      delay_ms(LINE_T);
       // Начинаем крутиться
-      goLeft();
+       robotStop();
+      goFastLeft();
+      goFastLeft();  goFastLeft();
+      goFastLeft();
       T = 0;
-      continue;
+      //while(CHECK_LINE);
+      continue;                        
     }
+   
     //------------------------------------------------------
     // Общие действия
     // Обнаружение противника передними датчиками
     //------------------------------------------------------
-    if(SharpFL&&SharpFR)
-    {
+if(SharpFL&&SharpFR)
+    {  
       goFwd();
       T = 0;
       continue;
     }
-    if(SharpFL||SharpSL)
-    {
+    // Плавные повороты
+    if(SharpFL)
+    {  
       goLeft();
       T = 0;
       a = 0;
       continue;
     }                 
-    if(SharpFR||SharpSR)
-    {
+    if(SharpFR)
+    {            
       goRight();
+      T = 0;
+      a = 1;
+      continue;
+    }  
+    // резкие повороты
+    if(SharpSL)
+    {                          
+      goFastLeft();
+      T = 0;
+      a = 0;
+      continue;
+    }                 
+    if(SharpSR)
+    {                 
+      goFastRight();
       T = 0;
       a = 1;
       continue;
@@ -229,8 +288,8 @@ void main(void)
     // Никого не обнаружили
     // Поиск противника
     //------------------------------------------------------
-    if(a==0) goLeft();
-    if(a==1) goRight();
+    if(a==0) goFastLeft();
+    if(a==1) goFastRight();
     if(a==2) goFwd();
     
     T=T+1;
