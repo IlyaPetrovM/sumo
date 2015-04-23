@@ -57,7 +57,8 @@ Features:
     #define ROBOT_NAME "FreeSumo RP-2"
     #define VERSION "1.00"      
     
-    #define LimSharpFwd       (BYTE)  60  // 100->16cm  50-> 30cm 165->6
+    #define LimSharpFwd       (BYTE)  60  // 100->16cm  50-> 30cm 165->6  
+    #define LimSharpClose     (BYTE)  120 // Для близкого расстояния
     #define LimSharpSide      (BYTE)  165 // 165->6cm
     #define LINE_LimLeft      (BYTE)  150 // Порог срабатывания датчиков полосы
     #define LINE_LimRight     (BYTE)  200
@@ -71,7 +72,8 @@ Features:
     #define CHECK_FOTO_R ReadByteADC(8)>LINE_LimRight
 
     #define CHECK_START_SENSOR (PIND.4)==0  /// Старт по сигналу с пульта (иначе задержка 5 сек)
-
+            
+    #define CHECK_SHARP_FC ((ReadByteADC(ADC_1)>LimSharpClose) || (ReadByteADC(ADC_2)>LimSharpClose)) 
     #define CHECK_SHARP_FL ReadByteADC(ADC_1)>LimSharpFwd  // 
     #define CHECK_SHARP_FR ReadByteADC(ADC_2)>LimSharpFwd  // 
 
