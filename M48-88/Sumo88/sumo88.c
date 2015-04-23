@@ -33,16 +33,32 @@ Features:
 #include <stdlib.h>
 #include "m48lib.h"
 
-#define LINE_LimLeft  (BYTE)200 // Порог срабатывания датчиков полосы
-#define LINE_LimRight (BYTE)200
-#define LINE_BACK_DELAY   (BYTE)  300// Время отъезда от линии
-#define LINE_TANK (BYTE) 1000      // активный поиск противника при развороте от линии
+#define FREE_SUMO /// Тип сумоиста
+#define FEEDBACK_TESTING  /// Крутить колёсами при тестировании
+#define START_SENSOR      /// Старт по сигналу с пульта (иначе задержка 5 сек)
 
-#define TANK_START (BYTE) 1000  //Активный поиск противника при старте
+/// Конфигурация отдельных сумоистов. Способы обращения к сенсорам и т.п.
+#ifdef FREE_SUMO
+    #define LINE_LimLeft  (BYTE)200 // Порог срабатывания датчиков полосы
+    #define LINE_LimRight (BYTE)200
+    #define LINE_BACK_DELAY   (BYTE)  300// Время отъезда от линии
+    #define LINE_TANK (BYTE) 1000      // активный поиск противника при развороте от линии
+    #define TANK_START (BYTE) 1000  //Активный поиск противника при старте
+    #define MAXT 2500    // Время смены тактики (количество тактов)
 
-#define MAXT 2500    // Время смены тактики (количество тактов)
+    // Макросы проверки датчиков
+    #define CHECK_FOTO_L ReadByteADC(ADC_1)>LINE_LimLeft
+    #define CHECK_FOTO_R ReadByteADC(ADC_2)>LINE_LimRight
 
+    #define SENSOR_START PIND.4 // Стартовый сигнал
+    #define CHECK_SHARP_FC PIND.4 // @todo как назначить 3 порт на вход?
 
+    #define CHECK_SHARP_FL (sen_4==0);  // 
+    #define CHECK_SHARP_FR (sen_6==0);  // 
+
+    #define CHECK_SHARP_SL (sen_3==0) // 
+    #define CHECK_SHARP_SR (sen_5==0) // 
+#endif
 
 //-------------------------------------------------------------
 //--Константы сенсоров (для запоминания предыдущего состояния) 
@@ -65,19 +81,6 @@ enum {
 short unsigned int sens = NO_SENS;            // текущее состояние
 short unsigned int last_sens = NO_SENS;       // предыдущее состояние
 //-------------------------------------------------------------
-
-// Макросы проверки датчиков
-#define CHECK_FOTO_L ReadByteADC(ADC_1)
-#define CHECK_FOTO_R ReadByteADC(ADC_2)
-
-#define SENSOR_START PIND.4 // Стартовый сигнал
-#define CHECK_SHARP_FC PIND.4 // @todo как назначить 3 порт на вход?
-
-#define CHECK_SHARP_FL (sen_4==0);  // green
-#define CHECK_SHARP_FR (sen_6==0);  // black
-
-#define CHECK_SHARP_SL (sen_3==0) // red
-#define CHECK_SHARP_SR (sen_5==0) // blue
 
 BYTE SharpFL, SharpFR, SharpFC, SharpSL, SharpSR, FotoL, FotoR;
 
@@ -105,36 +108,26 @@ void DebugProc(void)
   
   // Отладка с помощью моторов    
   while (1)
-  {     
-    SharpFC = (CHECK_SHARP_FC==0); // Sharp Front Center
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+  { 
+#ifdef FEEDBACK_TESTING                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
     SharpFL = CHECK_SHARP_FL;
     SharpFR = CHECK_SHARP_FR;
     
     SharpSL = CHECK_SHARP_SL;
     SharpSR = CHECK_SHARP_SR;
-   
-    
-    if(SharpFC)
-        goFwd();
-  
-    else
-    {           
-        robotStop();
-    /*   
-        if (SharpFL && SharpFR) 
-        {
-           ;
-        } 
-       else
-        {
-            if (SharpFL) {goLeft();  }
-            if (SharpFR) {goRight(); }                  
-        }
-        if (SharpSL) {goFastLeft(); }
-        if (SharpSR) {goFastRight();}      
-         */
-    }    
+
+    if (SharpFL && SharpFR) 
+    {
+       robotStop();
+    } 
+   else
+    {
+        if (SharpFL) {goLeft();  }
+        if (SharpFR) {goRight(); }                  
+    }
+    if (SharpSL) {goFastLeft(); }
+    if (SharpSR) {goFastRight();}      
+#endif
    
     
     /// Вывод значений датчиков на экран   
@@ -211,8 +204,8 @@ void main(void)
 // Для перехода в отладочный режим необходимо, чтоб перед включением датчики 
 // границы находились на светлом фоне
 //--------------------------------------------------------
-  FotoL = CHECK_FOTO_L>LINE_LimLeft;
-  FotoR = CHECK_FOTO_R>LINE_LimRight;
+  FotoL = CHECK_FOTO_L;
+  FotoR = CHECK_FOTO_R;
   
   if(FotoL && FotoR)
   {
@@ -259,31 +252,31 @@ void main(void)
 //--------------------------------------------------------
 // Ожидание сигнала START
 //--------------------------------------------------------
-    //while(SENSOR_START==0);
-  
+#ifdef START_SENSOR
+  while(SENSOR_START==0);
+#else
   delay_ms(5000);
-  
+#endif
   T = 0;      
 //--------------------------------------------------------
 // Основной цикл
 //--------------------------------------------------------
   while (1)
   {
-
 //------------------------------------------------------
 // Безусловные рефлексы
 // Сначала и идет обработка самых приоритетных сигналов
 //------------------------------------------------------
 
     // Реакция на сигнал СТОП 
-    /*
+#ifdef START_SENSOR
     if(SENSOR_START==0)
     {
       robotStop();
       pip();
       while(1);
     } 
-    */
+#endif
     
     // Реакция на границу поля
      switch (sens)
