@@ -1,4 +1,32 @@
+ *.*~
+ *.obj
+ *.map
+ *.lst
+ *.asm
+ *.eep
+ *.err
+ *.rom
+ *__.*
+ *.hex
+ *.vec
+ *.inc
 
+ *.sym
+ *.cof
+
+ *.a*
+ *.o*
+ *.c!
+ *.c@
+ *.c_*
+ *.cci
+ *.hdr
+ *.str*
+ *.i
+
+ *.h!
+ *.fct
+ *.h_cbf
 Debug
 soft
 doc

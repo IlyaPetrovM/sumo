@@ -1,6 +1,0 @@
-ATmega88(P,PA).
-Тестовая программа
-
-Необхдимо определить следующие глобальные имена:
-"Project" -> "Configure" ->"C Compliler" -> "Globally #define":
-_M48_LIB_
