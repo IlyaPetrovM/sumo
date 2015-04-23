@@ -1,7 +1,7 @@
 /// СОСТОЯНИЕ ПРОЕКТА: РАБОТАЕТ без центрального сенсора и без стартового сигнала
 /*****************************************************
 Project : Робот-сумоист FreeSumo RP-2
-Version : 2.01
+Version : 1.00
 Date    : 19.08.2013 
 LP      : 23.04.2015
 Author  : Петров Илья Михайлович
@@ -35,29 +35,47 @@ Features:
 
 #define FREE_SUMO /// Тип сумоиста
 #define FEEDBACK_TESTING  /// Крутить колёсами при тестировании
-#define START_SENSOR      /// Старт по сигналу с пульта (иначе задержка 5 сек)
+//#define START_SENSOR      /// Старт по сигналу с пульта (иначе задержка 5 сек)
 
 /// Конфигурация отдельных сумоистов. Способы обращения к сенсорам и т.п.
 #ifdef FREE_SUMO
-    #define LINE_LimLeft  (BYTE)200 // Порог срабатывания датчиков полосы
-    #define LINE_LimRight (BYTE)200
-    #define LINE_BACK_DELAY   (BYTE)  300// Время отъезда от линии
-    #define LINE_TANK (BYTE) 1000      // активный поиск противника при развороте от линии
+    #define LimSharpFwd       (BYTE)  60 // 100->16cm  50-> 30cm 165->6
+    #define LimSharpSide      (BYTE)  165 // 165->6cm
+    #define LINE_LimLeft      (BYTE)  150 // Порог срабатывания датчиков полосы
+    #define LINE_LimRight     (BYTE)  200
+    #define LINE_BACK_DELAY   (BYTE)  300 // Время отъезда от линии
+    #define LINE_TANK  (BYTE) 1000  // активный поиск противника при развороте от линии
     #define TANK_START (BYTE) 1000  //Активный поиск противника при старте
     #define MAXT 2500    // Время смены тактики (количество тактов)
 
     // Макросы проверки датчиков
-    #define CHECK_FOTO_L ReadByteADC(ADC_1)>LINE_LimLeft
-    #define CHECK_FOTO_R ReadByteADC(ADC_2)>LINE_LimRight
+    #define CHECK_FOTO_L ReadByteADC(7)>LINE_LimLeft
+    #define CHECK_FOTO_R ReadByteADC(8)>LINE_LimRight
 
-    #define SENSOR_START PIND.4 // Стартовый сигнал
-    #define CHECK_SHARP_FC PIND.4 // @todo как назначить 3 порт на вход?
+    #define CHECK_START_SENSOR (PIND.4)==0 // Стартовый сигнал
 
-    #define CHECK_SHARP_FL (sen_4==0);  // 
-    #define CHECK_SHARP_FR (sen_6==0);  // 
+    #define CHECK_SHARP_FL ReadByteADC(ADC_1)>LimSharpFwd  // 
+    #define CHECK_SHARP_FR ReadByteADC(ADC_2)>LimSharpFwd  // 
 
-    #define CHECK_SHARP_SL (sen_3==0) // 
-    #define CHECK_SHARP_SR (sen_5==0) // 
+    #define CHECK_SHARP_SL 0Ан//ReadByteADC(ADC_3)>LimSharpSide // 
+    #define CHECK_SHARP_SR 0//ReadByteADC(ADC_4)>LimSharpSide // 
+/* Расположение пинов
+            -----------------
+    Motor-L-+---..          |
+            |               |
+    Motor-R-+---.. ___      |
+     PIND.3-+..   |M88|   ..|-ADC_7
+     PIND.4-+..           ..|-ADC_8
+            |    ::::::     |
+            |    ||||||     |
+            -----++++++------
+                 ||||||_ADC_1
+                 |||||__ADC_2
+                 ||||___ADC_3
+                 |||____ADC_4
+                 ||_____ADC_5
+                 |______ADC_6
+*/          
 #endif
 
 //-------------------------------------------------------------
@@ -114,19 +132,29 @@ void DebugProc(void)
     SharpFR = CHECK_SHARP_FR;
     
     SharpSL = CHECK_SHARP_SL;
-    SharpSR = CHECK_SHARP_SR;
-
-    if (SharpFL && SharpFR) 
-    {
-       robotStop();
-    } 
+    SharpSR = CHECK_SHARP_SR;  
+    #ifdef CHECK_SHARP_FC 
+        SharpFC = CHECK_SHARP_FC;  
+    #endif
+   if(SharpFC)
+   {     
+        goFwd(); 
+   }
    else
-    {
-        if (SharpFL) {goLeft();  }
-        if (SharpFR) {goRight(); }                  
-    }
-    if (SharpSL) {goFastLeft(); }
-    if (SharpSR) {goFastRight();}      
+   {
+        if (SharpFL && SharpFR) 
+        {
+            goBack(); 
+        } 
+       else
+        {
+        if (SharpFL)      {goLeft();  } 
+        else if (SharpFR) {goRight(); }
+        else if (SharpSL) {goFastLeft(); } 
+        else if (SharpSR) {goFastRight();}
+        else robotStop();  
+        }
+    }     
 #endif
    
     
@@ -204,8 +232,12 @@ void main(void)
 // Для перехода в отладочный режим необходимо, чтоб перед включением датчики 
 // границы находились на светлом фоне
 //--------------------------------------------------------
-  FotoL = CHECK_FOTO_L;
-  FotoR = CHECK_FOTO_R;
+#ifdef CHECK_FOTO_L 
+    FotoL = CHECK_FOTO_L;
+#endif    
+#ifdef CHECK_FOTO_R
+    FotoR = CHECK_FOTO_R;
+#endif
   
   if(FotoL && FotoR)
   {
@@ -221,12 +253,12 @@ void main(void)
   sens = NO_SENS;
   while(sens == NO_SENS) 
   {
-    if(sen_3==0) 
+    if(CHECK_SHARP_SL) 
     {
         sens = SHARP_SL; 
         a = LEFT;  
     } 
-    if(sen_4==0)
+    if(CHECK_SHARP_SR)
     { 
         sens = SHARP_SR; 
         a = RIGHT;
@@ -253,7 +285,7 @@ void main(void)
 // Ожидание сигнала START
 //--------------------------------------------------------
 #ifdef START_SENSOR
-  while(SENSOR_START==0);
+  while(CHECK_START_SENSOR);
 #else
   delay_ms(5000);
 #endif
@@ -270,7 +302,7 @@ void main(void)
 
     // Реакция на сигнал СТОП 
 #ifdef START_SENSOR
-    if(SENSOR_START==0)
+    if(CHECK_START_SENSOR)
     {
       robotStop();
       pip();
@@ -435,12 +467,30 @@ void main(void)
     last_sens = sens; // Запоминаем предыдущее состояние
     sens = NO_SENS; // Выставляем значение по-умолчанию
     
-    // Считываем сигналы датчиков
-    if(CHECK_FOTO_L>LINE_LimLeft) sens = FOTO_L;
-    if(CHECK_FOTO_R>LINE_LimRight)sens = FOTO_R;
-    SharpFL = (sen_4==0);  // green
-    SharpFR = (sen_6==0);  // black
+/// Считываем сигналы датчиков
+#ifdef CHECK_FOTO_L 
+    FotoL = CHECK_FOTO_L;
+#endif    
+#ifdef CHECK_FOTO_R
+    FotoR = CHECK_FOTO_R;
+#endif
+    SharpFL = CHECK_SHARP_FL;  
+    SharpFR = CHECK_SHARP_FR; 
+    SharpSL = CHECK_SHARP_SL;
+    SharpSR = CHECK_SHARP_SR;
+#ifdef CHECK_SHARP_FC 
+    SharpFC = CHECK_SHARP_FC;  
+#endif
 
+/// Определение состояния робота
+    
+    
+#ifdef CHECK_FOTO_L 
+    if(FotoR) sens = FOTO_R;
+#endif    
+#ifdef CHECK_FOTO_R
+    if(FotoL) sens = FOTO_L; 
+#endif
     if(SharpFL && SharpFR) 
     {
         sens = SHARP_FLR;
@@ -451,10 +501,11 @@ void main(void)
         if(SharpFR) sens = SHARP_FR;  
     }
             
-    if(sen_3==0) sens = SHARP_SL; // red
-    if(sen_5==0) sens = SHARP_SR; // blue
-    if(CHECK_SHARP_FC==0) sens = SHARP_FC;
-       
+    if(SharpSL) sens = SHARP_SL; // red
+    if(SharpSR) sens = SHARP_SR; // blue  
+#ifdef CHECK_SHARP_FC   
+    if(SharpFC) sens = SHARP_FC;   
+#endif  
     if(T>MAXT) // Пора менять тактику
     {
       pip();
