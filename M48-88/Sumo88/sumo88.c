@@ -100,6 +100,7 @@ enum {
     RIGHT,
     FWD
 };
+enum {FAST, SLOW};
 short unsigned int sens = NO_SENS;            // текущее состояние
 short unsigned int last_sens = NO_SENS;       // предыдущее состояние
 BYTE SharpFL, SharpFR, SharpFC, SharpSL, SharpSR, FotoL, FotoR;
@@ -183,7 +184,8 @@ void DebugProc(void)
 void main(void)
 {
   int T;  //< Счетчик тактов для смены тактики поиска 
-  int a;  //< Куда крутиться, 0 - влево, 1 - вправо, 2 - вперёд 
+  int a;  //< Куда крутиться, 0 - влево, 1 - вправо, 2 - вперёд    
+  int spd=FAST;
 
   unsigned short tTankLimit=TANK_START; // Необходимое количество тактов танкового разворота
   unsigned short tTank=0;         // Счётчик тактов танкового разворота для поиска противника  
@@ -270,6 +272,7 @@ void main(void)
         a = RIGHT;
     }
   }   
+  spd=FAST;// Выставляем начальную скорость разворота
   
   /// Проверка выбранной стороны
   if(sens == SHARP_SL) 
@@ -438,30 +441,16 @@ void main(void)
 // Никого не обнаружили
 // Поиск противника
 //------------------------------------------------------
-                if(a==LEFT) 
-                {
-                    if(tTank>tTankLimit)
-                    {    
-                        goLeft();
-                    }
-                    else
-                    {   
-                        goFastLeft();
-                        tTank++;
-                    }  
-                }
-                if(a==RIGHT) 
-                {       
-                    if(tTank>tTankLimit)
-                        goRight();
-                    else
-                    {
-                        goFastRight();
-                        tTank++; 
-                    }
-                }
-                if(a==FWD) goFwd();
-                   
+                if(spd==FAST && a==LEFT) 
+                    goFastLeft();
+                else if(spd==FAST && a==RIGHT) 
+                    goFastRight();  
+                else if(spd==SLOW && a==LEFT) 
+                    goLeft(); 
+                else if(spd==SLOW && a==RIGHT) 
+                    goRight();     
+                else if(a==FWD) 
+                    goFwd();
             }
     }
     T=T+1; 
@@ -517,7 +506,8 @@ void main(void)
       pip();
       T=0;
       /// Выбираем действие "случайным" образом
-      a=rand()%3;  // Остаток от деления на 3 (деление по модулю 3)
+      a=rand()%3;  // Остаток от деления на 3 (деление по модулю 3)  
+      spd=rand()%2;
     }    
   }
 }
